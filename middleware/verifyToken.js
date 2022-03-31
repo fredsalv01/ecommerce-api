@@ -1,0 +1,30 @@
+const jwt = require('jsonwebtoken');
+
+const verifyToken = (req, res, next) => {
+    const bearerHeader = req.headers['authorization'];
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(' ');
+        const bearerToken = bearer[1];
+        jwt.verify(bearerToken, process.env.JWT_SECRET, (err, user) => {
+            if (err) res.status(403).json('Token is not valid!');
+            req.user = user;
+            next();
+        });
+
+    } else {
+        res.sendStatus(403).json("You are not authenticated!");
+    }
+}
+
+const verifyTokenAndAuthorization = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if(req.user.userId === req.params.id || req.user.isAdmin) {
+            next();
+        }else{
+            res.status(403).json("You are not allowed to do that!");
+        }
+    })
+}
+
+
+module.exports = {verifyToken, verifyTokenAndAuthorization};
