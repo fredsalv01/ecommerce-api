@@ -19,7 +19,7 @@ router.post("/", verifyToken, (req, res) => {
 })
 
 //update order
-router.put("/:id", verifyTokenAndAuthorization,(req, res) => {
+router.put("/:id", verifyTokenAndAdmin,(req, res) => {
    
     try{
         Order.findByIdAndUpdate(
@@ -34,7 +34,7 @@ router.put("/:id", verifyTokenAndAuthorization,(req, res) => {
 
 
 //delete order
-router.delete("/:id", verifyTokenAndAuthorization, async (req, res) => {
+router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
     try{
         await Order.findByIdAndDelete(req.params.id);
         res.status(200).json({message: "Order deleted successfully!"}); 
@@ -43,10 +43,10 @@ router.delete("/:id", verifyTokenAndAuthorization, async (req, res) => {
     }
 })
 
-//get user order
+//get user orders
 router.get("/find/:userId", verifyTokenAndAuthorization, (req, res) => {
     try{
-        Order.findOne({userId: req.params.userId}, (err, order) => {
+        Order.find({userId: req.params.userId}, (err, order) => {
             if(err) res.status(500).json(err);
             res.status(200).json(order._doc);
         })
@@ -56,7 +56,7 @@ router.get("/find/:userId", verifyTokenAndAuthorization, (req, res) => {
 })
 
 //get all
-router.get("/" , verifyTokenAndAuthorization, (req, res) => {
+router.get("/" , verifyTokenAndAdmin, (req, res) => {
     try{
         Order.find({}, (err, order) => {
             if(err) res.status(500).json(err);
@@ -65,6 +65,42 @@ router.get("/" , verifyTokenAndAuthorization, (req, res) => {
     }catch(error){
         res.status(500).json(error);
     }
+})
+
+//get monthly income
+router.get("/income", verifyTokenAndAdmin, (req, res) => {
+    const date = new Date();
+    const lastMonth = new Date(date.setMonth(date.getMonth() - 1));
+    const previousMonth = new Date(new Date().setMonth(lastMonth.getMonth() - 1));
+    
+    try{
+        Order.aggregate([
+            {
+                $match: {
+                    createdAt: {
+                        $gte: previousMonth,
+                        // $lte: lastMonth
+                    }
+                }
+            },
+            {
+                $project: {
+                    month: {$month: "$createdAt"},
+                    sales: "$amount",
+                },
+                $group: {
+                    _id: "$month",
+                    total: {$sum: "$sales"}
+                }
+            }
+        ], (err, income) => {
+            if(err) res.status(500).json(err);
+            res.status(200).json(income);
+        })
+    }catch(error){
+        res.status(500).json(error);
+    }
+
 })
 
 
